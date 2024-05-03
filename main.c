@@ -7,6 +7,7 @@
 #define MAX_CITY 70 // 69 characters is the longest city name
 #define MAX_SHAPE 10 // 9 characters is the longest shape name
 #define MAX_COMMENT 236 // 235 characters is the longest comment
+#define MAX_DURATION_CHARS 10
 
 typedef struct date { // MM/DD/YYYY format in csv
     int year;
@@ -40,7 +41,7 @@ void readDate(FILE *csv, date *date);
 
 void readTime(FILE *csv, dateTime *dateTime);
 
-void readSpacedString(FILE *csv, char string[]);
+void readStringToSpacer(FILE *csv, char string[]);
 
 void freeData(sightingNode *head);
 
@@ -64,13 +65,31 @@ void loadData(char fileName[], sightingNode *head) {
     char date[11];
     char time[6];
     char city[MAX_CITY];
+    char duration[MAX_DURATION_CHARS];
 
     for (line = 0; line < ROWS; line++) {
         fscanf(csv, "%s", date);
         fseek(csv, 1, SEEK_CUR);
         fscanf(csv, "%5s", time);
         fseek(csv, 1, SEEK_CUR);
-        readSpacedString(csv, city);
+        readStringToSpacer(csv, city);
+        fseek(csv, 1, SEEK_CUR);
+        fscanf(csv, "%c", &c);
+        if (c != ',') {
+            head->state[0] = c;
+            fscanf(csv, "%c", &head->state[1]);
+            fseek(csv, 1, SEEK_CUR);
+        }
+        fscanf(csv, "%c", &c);
+        if (c != ',') {
+            head->country[0] = c;
+            fscanf(csv, "%c", &head->country[1]);
+            fseek(csv, 1, SEEK_CUR);
+        }
+        readStringToSpacer(csv, head->shape);
+        fseek(csv, 1, SEEK_CUR);
+        readStringToSpacer(csv, duration);
+        fseek(csv, 1, SEEK_CUR);
         // TODO: more reading
     }
 
@@ -85,7 +104,7 @@ void readTime(FILE *csv, dateTime *dateTime) {
 
 }
 
-void readSpacedString(FILE *csv, char string[]) {
+void readStringToSpacer(FILE *csv, char string[]) {
     char c = ' ';
     int i = 0;
     while (c != ',') {
@@ -96,4 +115,5 @@ void readSpacedString(FILE *csv, char string[]) {
             string[i] = c;
         i++;
     }
+    fseek(csv, -1, SEEK_CUR);
 }
