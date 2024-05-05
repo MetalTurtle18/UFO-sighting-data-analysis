@@ -1,9 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#define COLUMNS 10
-//#define ROWS 80332
-#define ROWS 10 // TODO debug number
 #define MAX_CITY 70 // 69 characters is the longest city name
 #define MAX_SHAPE 10 // 9 characters is the longest shape name
 #define MAX_COMMENT 236 // 235 characters is the longest comment
@@ -48,13 +45,13 @@ char menu(char message[], char optionsText[][MAX_MENU_OPTION], char options[], i
 int main(void) {
     sightingNode *headNode = malloc(sizeof(sightingNode));
 
-    loadData("../scrubbed.csv", headNode);
 
     // TODO TESTING
     char optionsText[][MAX_MENU_OPTION] = {"Number 1", "number 2", "opt 3"};
     char options[] = {'a', 'b', 'c'};
     char l = menu("here is menu", optionsText, options, 3, 0);
     printf("a%ca", l);
+    loadData("../test.csv", headNode);
 
     freeData(headNode);
     return 0;
@@ -62,10 +59,9 @@ int main(void) {
 
 void loadData(char fileName[], sightingNode *head) {
     FILE *csv = fopen(fileName, "r");
-    int line;
     sightingNode *node = head;
 
-    for (line = 0; line < ROWS; line++) {
+    while (1) {
         fscanf(csv, "%d/%d/%4d %2d:%2d,",
                &node->dateTime.date.month,
                &node->dateTime.date.day,
@@ -86,8 +82,10 @@ void loadData(char fileName[], sightingNode *head) {
                &node->longitude,
                &node->latitude
         );
-        node = malloc(sizeof(sightingNode));
-        head->next = node;
+        if (fscanf(csv, "%c") == EOF) break;
+        fseek(csv, -1, SEEK_CUR);
+        node->next = malloc(sizeof(sightingNode));
+        node = node->next;
     }
 
     fclose(csv);
