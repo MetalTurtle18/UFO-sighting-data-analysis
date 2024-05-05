@@ -78,9 +78,11 @@ void addEntry(sightingNode **head, sightingNode *node);
 
 void removeEntry(sightingNode **node);
 
-char menu(char message[], char optionsText[][MAX_MENU_OPTION], char options[], int numOptions, int defaultOption);
+int saveData(sightingNode *head);
 
-int test(sightingNode *node);
+void saveNode(FILE *file, sightingNode *node);
+
+char menu(char message[], char optionsText[][MAX_MENU_OPTION], char options[], int numOptions, int defaultOption);
 
 int main(void) {
     char menuInput;
@@ -91,7 +93,7 @@ int main(void) {
     int size;
     sightingNode *headNode = malloc(sizeof(sightingNode));
 
-    size = loadData("../sample.csv", headNode);
+    size = loadData("../test.csv", headNode);
 
     // TODO TESTING CODE
     printList(headNode, size);
@@ -115,8 +117,9 @@ int main(void) {
 //    addEntry(&headNode, new);
 
     removeEntry(&headNode);
-    removeEntry(&headNode);
     removeEntry(&(headNode->next));
+
+    saveData(headNode);
 
     // TODO END TESTING
 
@@ -324,6 +327,61 @@ void addEntry(sightingNode **head, sightingNode *node) {
 
 void removeEntry(sightingNode **node) {
     *node = (*node)->next;
+}
+
+int saveData(sightingNode *head) {
+    FILE *file;
+    char fileName[41]; // String to store the user-entered file name
+    char createNewFile; // To get input from the user later
+    sightingNode *node = head;
+
+    printf("Saving\n");
+    printf("Enter the name of the file you would like to save to (this will overwrite existing files): ");
+    scanf("%40s", fileName);
+    file = fopen(fileName, "r"); // FIRST try to open the file in read mode to see if it exists
+    if (file == NULL) { // If it does not exist, give the user the option to create it
+        printf("There is no file called %s. Do you want to create it? (Y/n) ", fileName);
+        scanf(" %c", &createNewFile);
+        if (createNewFile != 'y' && createNewFile != 'Y') { // If the user DOES NOT enter yes, return to the game
+            printf("Save cancelled\n");
+            return 0; // Return 0 because the file was not saved
+        }
+    } else { // Otherwise, make sure to close the file before the next step
+        fclose(file);
+    }
+    file = fopen(fileName, "w"); // NOW open it in write mode. If it did not exist before, it will be created
+
+    while (node != NULL) {
+        saveNode(file, node);
+        node = node->next;
+        if (node != NULL)
+            fprintf(file, "\n");
+    }
+
+    fclose(file);
+    printf("Data saved to %s.\n", fileName);
+    return 1;
+}
+
+void saveNode(FILE *file, sightingNode *node) {
+    fprintf(file, "%d/%d/%d %02d:%02d,%s,%s,%s,%s,%d,%s,%d/%d/%d,%lf,%lf",
+            node->dateTime.date.month,
+            node->dateTime.date.day,
+            node->dateTime.date.year,
+            node->dateTime.hour,
+            node->dateTime.minute,
+            node->city,
+            node->state,
+            node->country,
+            node->shape,
+            node->duration,
+            node->comment,
+            node->dateReported.month,
+            node->dateReported.day,
+            node->dateReported.year,
+            node->longitude,
+            node->latitude
+    );
 }
 
 char menu(char message[], char optionsText[][MAX_MENU_OPTION], char options[], int numOptions, int defaultOption) {
