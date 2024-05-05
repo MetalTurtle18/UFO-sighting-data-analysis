@@ -32,13 +32,23 @@ typedef struct sightingNode {
     struct sightingNode *next;
 } sightingNode;
 
-void loadData(char fileName[], sightingNode *head);
-
 void readStringToSpacer(FILE *csv, char string[]);
 
 void freeData(sightingNode *head);
 
-int in(char c, char arr[], int len);
+void sortByDate(sightingNode **head, int size);
+
+void printList(sightingNode *head, int maxNodes);
+
+void printNode(sightingNode *node);
+
+sightingNode *swapNodes(sightingNode *ptr1, sightingNode *ptr2);
+
+int loadData(char fileName[], sightingNode *head);
+
+int contains(char c, char arr[], int len);
+
+int datecmp(date d1, date d2);
 
 char menu(char message[], char optionsText[][MAX_MENU_OPTION], char options[], int numOptions, int defaultOption);
 
@@ -53,9 +63,9 @@ int main(void) {
 
     size = loadData("../test.csv", headNode);
 
-    sortByDate(headNode, size); // todo testing
-
-
+    printList(headNode, size);
+    sortByDate(&headNode, size); // todo testing
+    printList(headNode, size);
 
 //    menuInput = menu("here is menu", menu1, menu1o, sizeof(menu1) / sizeof(menu1[0]), 0);
 
@@ -65,11 +75,75 @@ int main(void) {
     return 0;
 }
 
-void loadData(char fileName[], sightingNode *head) {
+void readStringToSpacer(FILE *csv, char string[]) {
+    char c = ' ';
+    int i = 0;
+    while (c != ',') {
+        fscanf(csv, "%c", &c);
+        if (c == ',')
+            string[i] = '\0';
+        else
+            string[i] = c;
+        i++;
+    }
+}
+
+void freeData(sightingNode *head) {
+    if (head->next == NULL)
+        free(head);
+    else
+        freeData(head->next);
+}
+
+void sortByDate(sightingNode **head, int size) { // TODO Test
+    sightingNode **cur, *ptr1, *ptr2;
+    int sorted, i, j;
+    for (i = 0; i < size; i++) {
+        cur = head;
+        sorted = 1;
+        for (j = 0; j < size - i - 1; j++) {
+            ptr1 = *cur;
+            ptr2 = ptr1->next;
+            if (datecmp(ptr1->dateReported, ptr2->dateReported) > 0) {
+                *cur = swapNodes(ptr1, ptr2);
+                sorted = 0;
+            }
+            cur = &(*cur)->next;
+        }
+        if (sorted)
+            break;
+    }
+}
+
+void printList(sightingNode *head, int maxNodes) {
+    sightingNode *node = head;
+    int i = 0;
+    while (node != NULL && i < maxNodes) {
+        printNode(node); // TODO function pointer here for varied printing (like a lambda)
+        printf("\n");
+        i++;
+        node = node->next;
+    }
+}
+
+void printNode(sightingNode *node) {
+    printf("%s", node->city);
+}
+
+sightingNode *swapNodes(sightingNode *ptr1, sightingNode *ptr2) {
+    sightingNode *tmp = ptr2->next;
+    ptr2->next = ptr1;
+    ptr1->next = tmp;
+    return ptr2;
+}
+
+int loadData(char fileName[], sightingNode *head) {
     FILE *csv = fopen(fileName, "r");
     sightingNode *node = head;
+    int i = 0;
 
     while (1) {
+        i++;
         fscanf(csv, "%d/%d/%4d %2d:%2d,",
                &node->dateTime.date.month,
                &node->dateTime.date.day,
@@ -97,33 +171,33 @@ void loadData(char fileName[], sightingNode *head) {
     }
 
     fclose(csv);
+    return i;
 }
 
-void readStringToSpacer(FILE *csv, char string[]) {
-    char c = ' ';
-    int i = 0;
-    while (c != ',') {
-        fscanf(csv, "%c", &c);
-        if (c == ',')
-            string[i] = '\0';
-        else
-            string[i] = c;
-        i++;
-    }
-}
-
-void freeData(sightingNode *head) {
-    if (head->next == NULL)
-        free(head);
-    else
-        freeData(head->next);
-}
-
-int in(char c, char arr[], int len) {
+int contains(char c, char arr[], int len) {
     int i;
     for (i = 0; i < len; i++)
         if (arr[i] == c)
             return 1;
+    return 0;
+}
+
+int datecmp(date d1, date d2) {
+    // -1 == d1 before
+    // 1 == d1 after
+    // 0 == same date
+    if (d1.year < d2.year)
+        return -1;
+    else if (d1.year > d2.year)
+        return 1;
+    if (d1.month < d2.month)
+        return -1;
+    else if (d1.month > d2.month)
+        return 1;
+    if (d1.day < d2.day)
+        return -1;
+    else if (d1.day > d2.day)
+        return 1;
     return 0;
 }
 
@@ -143,7 +217,7 @@ char menu(char message[], char optionsText[][MAX_MENU_OPTION], char options[], i
         }
         scanf("%c", &out);
         first = 0;
-    } while (!in(out, options, numOptions) && out != '\n');
+    } while (!contains(out, options, numOptions) && out != '\n');
 
     if (out == '\n')
         return options[defaultOption];
