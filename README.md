@@ -1,1 +1,1 @@
-# UFO-sighting-data-analysis.git
+# UFO-sighting-data-analysis

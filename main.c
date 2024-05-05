@@ -43,15 +43,23 @@ int in(char c, char arr[], int len);
 char menu(char message[], char optionsText[][MAX_MENU_OPTION], char options[], int numOptions, int defaultOption);
 
 int main(void) {
+    char menuInput;
+    // DECLARE MENUS
+    char menu1[][MAX_MENU_OPTION] = {"View", "Sort", "Filter", "Add", "Delete", "Save"};
+    char menu1o[] = {'v', 'o', 'f', 'a', 'r', 's'}; // TODO this can be put into a struct
+
+    int size;
     sightingNode *headNode = malloc(sizeof(sightingNode));
 
+    size = loadData("../test.csv", headNode);
 
-    // TODO TESTING
-    char optionsText[][MAX_MENU_OPTION] = {"Number 1", "number 2", "opt 3"};
-    char options[] = {'a', 'b', 'c'};
-    char l = menu("here is menu", optionsText, options, 3, 0);
-    printf("a%ca", l);
-    loadData("../test.csv", headNode);
+    sortByDate(headNode, size); // todo testing
+
+
+
+//    menuInput = menu("here is menu", menu1, menu1o, sizeof(menu1) / sizeof(menu1[0]), 0);
+
+    printf("SELECTION: %c\n", menuInput);
 
     freeData(headNode);
     return 0;
