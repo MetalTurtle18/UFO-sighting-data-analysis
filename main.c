@@ -76,6 +76,8 @@ int dateReportedPredicate(sightingNode *node, date d);
 
 void addEntry(sightingNode **head, sightingNode *node);
 
+void removeEntry(sightingNode **node);
+
 char menu(char message[], char optionsText[][MAX_MENU_OPTION], char options[], int numOptions, int defaultOption);
 
 int test(sightingNode *node);
@@ -110,7 +112,11 @@ int main(void) {
     printArray(results, MAX_SEARCH_RESULTS);
 
     sightingNode *new = malloc(sizeof(sightingNode));
-    addEntry(&headNode, new);
+//    addEntry(&headNode, new);
+
+    removeEntry(&headNode);
+    removeEntry(&headNode);
+    removeEntry(&(headNode->next));
 
     // TODO END TESTING
 
@@ -314,6 +320,10 @@ int dateReportedPredicate(sightingNode *node, date d) {
 void addEntry(sightingNode **head, sightingNode *node) {
     node->next = *head;
     *head = node;
+}
+
+void removeEntry(sightingNode **node) {
+    *node = (*node)->next;
 }
 
 char menu(char message[], char optionsText[][MAX_MENU_OPTION], char options[], int numOptions, int defaultOption) {
