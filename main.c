@@ -1,10 +1,12 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 #define MAX_CITY 70 // 69 characters is the longest city name
 #define MAX_SHAPE 10 // 9 characters is the longest shape name
 #define MAX_COMMENT 236 // 235 characters is the longest comment
 #define MAX_MENU_OPTION 50
+#define MAX_SEARCH_RESULTS 10
 
 typedef struct date { // MM/DD/YYYY format in csv
     int year;
@@ -32,6 +34,10 @@ typedef struct sightingNode {
     struct sightingNode *next;
 } sightingNode;
 
+typedef int (*stringPredicate)(sightingNode *, char s[]);
+
+typedef int (*datePredicate)(sightingNode *, date);
+
 void readStringToSpacer(FILE *csv, char string[]);
 
 void freeData(sightingNode *head);
@@ -39,6 +45,8 @@ void freeData(sightingNode *head);
 void sortByDate(sightingNode **head, int size);
 
 void printList(sightingNode *head, int maxNodes);
+
+void printArray(sightingNode *arr[], int size);
 
 void printNode(sightingNode *node);
 
@@ -50,7 +58,25 @@ int contains(char c, char arr[], int len);
 
 int datecmp(date d1, date d2);
 
+void searchByString(sightingNode **results, sightingNode *head, stringPredicate predicate, char string[]);
+
+void searchByDate(sightingNode **results, sightingNode *head, datePredicate predicate, date d);
+
+int shapePredicate(sightingNode *node, char *shape);
+
+int cityPredicate(sightingNode *node, char *shape);
+
+int statePredicate(sightingNode *node, char *shape);
+
+int countryPredicate(sightingNode *node, char *shape);
+
+int dateOccurredPredicate(sightingNode *node, date d);
+
+int dateReportedPredicate(sightingNode *node, date d);
+
 char menu(char message[], char optionsText[][MAX_MENU_OPTION], char options[], int numOptions, int defaultOption);
+
+int test(sightingNode *node);
 
 int main(void) {
     char menuInput;
@@ -61,11 +87,27 @@ int main(void) {
     int size;
     sightingNode *headNode = malloc(sizeof(sightingNode));
 
-    size = loadData("../test.csv", headNode);
+    size = loadData("../sample.csv", headNode);
 
+    // TODO TESTING CODE
     printList(headNode, size);
-    sortByDate(&headNode, size); // todo testing
+    sortByDate(&headNode, size);
     printList(headNode, size);
+    sightingNode *results[MAX_SEARCH_RESULTS];
+    searchByString(results, headNode, shapePredicate, "circle");
+    printArray(results, MAX_SEARCH_RESULTS);
+    searchByString(results, headNode, shapePredicate, "circle");
+    printArray(results, MAX_SEARCH_RESULTS);
+    printf("\n\n\n");
+    date d = {1974, 10, 10};
+    searchByDate(results, headNode, dateOccurredPredicate, d);
+    printArray(results, MAX_SEARCH_RESULTS);
+    printf("\n\n\n");
+    date e = {1999, 8, 10};
+    searchByDate(results, headNode, dateReportedPredicate, e);
+    printArray(results, MAX_SEARCH_RESULTS);
+    // TODO END TESTING
+
 
 //    menuInput = menu("here is menu", menu1, menu1o, sizeof(menu1) / sizeof(menu1[0]), 0);
 
@@ -123,6 +165,15 @@ void printList(sightingNode *head, int maxNodes) {
         printf("\n");
         i++;
         node = node->next;
+    }
+}
+
+void printArray(sightingNode *arr[], int size) {
+    int i = 0;
+    while (arr[i] != NULL && i < size) {
+        printNode(arr[i]); // TODO function pointer here for varied printing (like a lambda)
+        printf("\n");
+        i++;
     }
 }
 
@@ -199,6 +250,60 @@ int datecmp(date d1, date d2) {
     else if (d1.day > d2.day)
         return 1;
     return 0;
+}
+
+void searchByString(sightingNode **results, sightingNode *head, stringPredicate predicate, char string[]) {
+    sightingNode *node = head;
+    int i = 0;
+    int j;
+    while (i < MAX_SEARCH_RESULTS && node != NULL) {
+        if (predicate(node, string)) {
+            results[i] = node;
+            i++;
+        }
+        node = node->next;
+    }
+    for (j = i; j < MAX_SEARCH_RESULTS; j++)
+        results[j] = NULL;
+}
+
+void searchByDate(sightingNode **results, sightingNode *head, datePredicate predicate, date d) {
+    sightingNode *node = head;
+    int i = 0;
+    int j;
+    while (i < MAX_SEARCH_RESULTS && node != NULL) {
+        if (predicate(node, d)) {
+            results[i] = node;
+            i++;
+        }
+        node = node->next;
+    }
+    for (j = i; j < MAX_SEARCH_RESULTS; j++)
+        results[j] = NULL;
+}
+
+int shapePredicate(sightingNode *node, char *shape) {
+    return strcmp(node->shape, shape) == 0;
+}
+
+int cityPredicate(sightingNode *node, char *city) {
+    return strncmp(city, node->city, strlen(city)) == 0;
+}
+
+int statePredicate(sightingNode *node, char *state) {
+    return strcmp(node->state, state) == 0;
+}
+
+int countryPredicate(sightingNode *node, char *country) {
+    return strcmp(node->country, country) == 0;
+}
+
+int dateOccurredPredicate(sightingNode *node, date d) {
+    return datecmp(node->dateTime.date, d) == 0;
+}
+
+int dateReportedPredicate(sightingNode *node, date d) {
+    return datecmp(node->dateReported, d) == 0;
 }
 
 char menu(char message[], char optionsText[][MAX_MENU_OPTION], char options[], int numOptions, int defaultOption) {
