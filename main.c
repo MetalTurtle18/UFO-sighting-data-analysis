@@ -74,6 +74,8 @@ int dateOccurredPredicate(sightingNode *node, date d);
 
 int dateReportedPredicate(sightingNode *node, date d);
 
+void addEntry(sightingNode **head, sightingNode *node);
+
 char menu(char message[], char optionsText[][MAX_MENU_OPTION], char options[], int numOptions, int defaultOption);
 
 int test(sightingNode *node);
@@ -106,8 +108,11 @@ int main(void) {
     date e = {1999, 8, 10};
     searchByDate(results, headNode, dateReportedPredicate, e);
     printArray(results, MAX_SEARCH_RESULTS);
-    // TODO END TESTING
 
+    sightingNode *new = malloc(sizeof(sightingNode));
+    addEntry(&headNode, new);
+
+    // TODO END TESTING
 
 //    menuInput = menu("here is menu", menu1, menu1o, sizeof(menu1) / sizeof(menu1[0]), 0);
 
@@ -304,6 +309,11 @@ int dateOccurredPredicate(sightingNode *node, date d) {
 
 int dateReportedPredicate(sightingNode *node, date d) {
     return datecmp(node->dateReported, d) == 0;
+}
+
+void addEntry(sightingNode **head, sightingNode *node) {
+    node->next = *head;
+    *head = node;
 }
 
 char menu(char message[], char optionsText[][MAX_MENU_OPTION], char options[], int numOptions, int defaultOption) {
