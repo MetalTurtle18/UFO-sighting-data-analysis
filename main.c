@@ -112,7 +112,7 @@ int main(void) {
         switch (state) {
             case 1:
                 menuInput = menu("Main Menu", mainMenu, mainMenuOptions, sizeof(mainMenu) / sizeof(mainMenu[0]), 0);
-                switch(menuInput) {
+                switch (menuInput) {
                     case 'q':
                         printf("Exiting program...");
                         state = 0;
@@ -131,6 +131,8 @@ int main(void) {
                                  sizeof(openMenu) / sizeof(openMenu[0]), 1);
                 if (menuInput == 'e')
                     getFileName(fileName);
+                else
+                    printf("Using default file name %s\n", fileName);
                 size = loadData(fileName, headNode);
                 printList(headNode, MAX_SEARCH_RESULTS);
                 state = 1;
@@ -419,25 +421,21 @@ void saveNode(FILE *file, sightingNode *node) {
 
 char menu(char message[], char optionsText[][MAX_MENU_OPTION], char options[], int numOptions, int defaultOption) {
     int i;
-    int first = 1;
-    char out, _;
+    char out[] = " \0";
     printf(SPACER"%s\n", message);
     for (i = 0; i < numOptions; i++)
         printf("%s (%c)\n", optionsText[i], options[i]);
     printf("> ");
 
     do {
-        if (!first) {
+        if (out[1] != '\0')
             printf("Invalid option. Try again\n> ");
-            scanf("%c", &_);
-        }
-        scanf("%c", &out);
-        first = 0;
-    } while (!contains(out, options, numOptions) && out != '\n');
+        strcpy(out, "  ");
+        scanf("%c", out);
+        while (out[0] != '\n' && out[1] != '\n') { scanf("%c", out + 1); }
+    } while (!contains(out[0], options, numOptions) && out[0] != '\n');
 
-    if (out == '\n')
+    if (out[0] == '\n')
         return options[defaultOption];
-    else
-        scanf("%c", &_);
-    return out;
+    return out[0];
 }
