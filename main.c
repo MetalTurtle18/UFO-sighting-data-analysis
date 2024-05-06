@@ -2,6 +2,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+#define SPACER "--------------------------------------------\n"
+
 #define MAX_CITY 70 // 69 characters is the longest city name
 #define MAX_SHAPE 10 // 9 characters is the longest shape name
 #define MAX_COMMENT 236 // 235 characters is the longest comment
@@ -78,6 +80,8 @@ void addEntry(sightingNode **head, sightingNode *node);
 
 void removeEntry(sightingNode **node);
 
+void getFileName(char fileName[]);
+
 int saveData(sightingNode *head);
 
 void saveNode(FILE *file, sightingNode *node);
@@ -85,47 +89,58 @@ void saveNode(FILE *file, sightingNode *node);
 char menu(char message[], char optionsText[][MAX_MENU_OPTION], char options[], int numOptions, int defaultOption);
 
 int main(void) {
-    char menuInput;
     // DECLARE MENUS
-    char menu1[][MAX_MENU_OPTION] = {"View", "Sort", "Filter", "Add", "Delete", "Save"};
-    char menu1o[] = {'v', 'o', 'f', 'a', 'r', 's'}; // TODO this can be put into a struct
+    char menuInput;
+    char mainMenu[][MAX_MENU_OPTION] = {"View more", "Sort", "Filter", "Add", "Delete", "Save", "Quit"};
+    char mainMenuOptions[] = {'v', 'o', 'f', 'a', 'r', 's', 'q'};
+    char sortMenu[][MAX_MENU_OPTION] = {"Date", "City", "State", "Country", "Shape", "Duration", "Date reported",
+                                        "Reverse sorting"};
+    char sortMenuOptions[] = {'d', 't', 's', 'c', 'h', 'u', 'r', 'f'};
+    char filterMenu[][MAX_MENU_OPTION] = {"Date", "City", "State", "Country", "Shape", "Reported", "Clear"};
+    char filterMenuOptions[] = {'d', 't', 's', 'c', 'h', 'r', 'l'};
+    char openMenu[][MAX_MENU_OPTION] = {"Continue to file name entry?"};
+    char openMenuOptions[] = {'e', 'd'};
 
+    // DECLARE OTHER VARIABLES
     int size;
+    int state = 4; // 0 = exiting; 1 = main menu; 2 = sort menu; 3 = filter menu, 4 = opening data, 5 = saving
+    char fileName[50] = "../sample.csv";
     sightingNode *headNode = malloc(sizeof(sightingNode));
 
-    size = loadData("../test.csv", headNode);
 
-    // TODO TESTING CODE
-    printList(headNode, size);
-    sortByDate(&headNode, size);
-    printList(headNode, size);
-    sightingNode *results[MAX_SEARCH_RESULTS];
-    searchByString(results, headNode, shapePredicate, "circle");
-    printArray(results, MAX_SEARCH_RESULTS);
-    searchByString(results, headNode, shapePredicate, "circle");
-    printArray(results, MAX_SEARCH_RESULTS);
-    printf("\n\n\n");
-    date d = {1974, 10, 10};
-    searchByDate(results, headNode, dateOccurredPredicate, d);
-    printArray(results, MAX_SEARCH_RESULTS);
-    printf("\n\n\n");
-    date e = {1999, 8, 10};
-    searchByDate(results, headNode, dateReportedPredicate, e);
-    printArray(results, MAX_SEARCH_RESULTS);
-
-    sightingNode *new = malloc(sizeof(sightingNode));
-//    addEntry(&headNode, new);
-
-    removeEntry(&headNode);
-    removeEntry(&(headNode->next));
-
-    saveData(headNode);
-
-    // TODO END TESTING
-
-//    menuInput = menu("here is menu", menu1, menu1o, sizeof(menu1) / sizeof(menu1[0]), 0);
-
-    printf("SELECTION: %c\n", menuInput);
+    while (state) { // TODO: implement all menu actions
+        switch (state) {
+            case 1:
+                menuInput = menu("Main Menu", mainMenu, mainMenuOptions, sizeof(mainMenu) / sizeof(mainMenu[0]), 0);
+                switch(menuInput) {
+                    case 'q':
+                        printf("Exiting program...");
+                        state = 0;
+                        break;
+                }
+                break;
+            case 2:
+                menuInput = menu("Sort Menu", sortMenu, sortMenuOptions, sizeof(sortMenu) / sizeof(sortMenu[0]), 0);
+                break;
+            case 3:
+                menuInput = menu("Filter menu", filterMenu, filterMenuOptions,
+                                 sizeof(filterMenu) / sizeof(filterMenu[0]), 6);
+                break;
+            case 4:
+                menuInput = menu("Load data set (return to use default)", openMenu, openMenuOptions,
+                                 sizeof(openMenu) / sizeof(openMenu[0]), 1);
+                if (menuInput == 'e')
+                    getFileName(fileName);
+                size = loadData(fileName, headNode);
+                printList(headNode, MAX_SEARCH_RESULTS);
+                state = 1;
+                break;
+            case 5:
+                break;
+            default:
+                break;
+        }
+    }
 
     freeData(headNode);
     return 0;
@@ -363,6 +378,24 @@ int saveData(sightingNode *head) {
     return 1;
 }
 
+void getFileName(char fileName[]) {
+    int incomplete = 1;
+    FILE *file;
+    char _;
+    while (incomplete) {
+        printf("Enter file name\n> ");
+        scanf("%s", fileName);
+        file = fopen(fileName, "r");
+        if (file != NULL) {
+            incomplete = 0;
+            fclose(file);
+            scanf("%c", &_);
+        } else {
+            printf("That file does not exist\n");
+        }
+    }
+}
+
 void saveNode(FILE *file, sightingNode *node) {
     fprintf(file, "%d/%d/%d %02d:%02d,%s,%s,%s,%s,%d,%s,%d/%d/%d,%lf,%lf",
             node->dateTime.date.month,
@@ -388,7 +421,7 @@ char menu(char message[], char optionsText[][MAX_MENU_OPTION], char options[], i
     int i;
     int first = 1;
     char out, _;
-    printf("%s\n", message);
+    printf(SPACER"%s\n", message);
     for (i = 0; i < numOptions; i++)
         printf("%s (%c)\n", optionsText[i], options[i]);
     printf("> ");
