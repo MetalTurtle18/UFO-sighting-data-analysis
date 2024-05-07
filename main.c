@@ -60,6 +60,8 @@ int contains(char c, char arr[], int len);
 
 int datecmp(date d1, date d2);
 
+void lookAhead(sightingNode **node, int steps);
+
 void searchByString(sightingNode **results, sightingNode *head, stringPredicate predicate, char string[]);
 
 void searchByDate(sightingNode **results, sightingNode *head, datePredicate predicate, date d);
@@ -91,8 +93,9 @@ char menu(char message[], char optionsText[][MAX_MENU_OPTION], char options[], i
 int main(void) {
     // DECLARE MENUS
     char menuInput;
-    char mainMenu[][MAX_MENU_OPTION] = {"View more", "Sort", "Filter", "Add", "Delete", "Save", "Quit"};
-    char mainMenuOptions[] = {'v', 'o', 'f', 'a', 'r', 's', 'q'};
+    char mainMenu[][MAX_MENU_OPTION] = {"View more", "Sort", "Filter", "Return to top", "Add", "Delete", "Save",
+                                        "Quit"};
+    char mainMenuOptions[] = {'v', 'o', 'f', 'c', 'a', 'r', 's', 'q'};
     char sortMenu[][MAX_MENU_OPTION] = {"Date", "City", "State", "Country", "Shape", "Duration", "Date reported",
                                         "Reverse sorting"};
     char sortMenuOptions[] = {'d', 't', 's', 'c', 'h', 'u', 'r', 'f'};
@@ -103,9 +106,11 @@ int main(void) {
 
     // DECLARE OTHER VARIABLES
     int size;
-    int state = 4; // 0 = exiting; 1 = main menu; 2 = sort menu; 3 = filter menu, 4 = opening data, 5 = saving
+    int viewingLocation = 0;
+    int state = 4; // 0 = exiting; 1 = main menu; 2 = sort menu; 3 = filter menu, 4 = opening data
     char fileName[50] = "../sample.csv";
     sightingNode *headNode = malloc(sizeof(sightingNode));
+    sightingNode *viewingNode = headNode;
 
 
     while (state) { // TODO: implement all menu actions
@@ -113,6 +118,26 @@ int main(void) {
             case 1:
                 menuInput = menu("Main Menu", mainMenu, mainMenuOptions, sizeof(mainMenu) / sizeof(mainMenu[0]), 0);
                 switch (menuInput) {
+                    case 'v':
+                        if (viewingLocation + 10 >= size) {
+                            printf("You are already viewing the end of the data. Try 'c' to return to the top\n");
+                            break;
+                        }
+                        lookAhead(&viewingNode, MAX_SEARCH_RESULTS);
+                        viewingLocation += 10;
+                        printList(viewingNode, MAX_SEARCH_RESULTS);
+                        if (viewingLocation + 10 >= size)
+                            printf("End of data\n");
+                        break;
+                    case 'c':
+                        viewingNode = headNode;
+                        viewingLocation = 0;
+                        printList(viewingNode, MAX_SEARCH_RESULTS);
+                        break;
+                    case 's':
+                        if (saveData(headNode))
+                            state = 0;
+                        break;
                     case 'q':
                         printf("Exiting program...");
                         state = 0;
@@ -134,10 +159,11 @@ int main(void) {
                 else
                     printf("Using default file name %s\n", fileName);
                 size = loadData(fileName, headNode);
-                printList(headNode, MAX_SEARCH_RESULTS);
+                viewingNode = headNode;
+                printList(viewingNode, MAX_SEARCH_RESULTS);
+                if (viewingLocation + 10 >= size)
+                    printf("End of data\n");
                 state = 1;
-                break;
-            case 5:
                 break;
             default:
                 break;
@@ -209,7 +235,19 @@ void printArray(sightingNode *arr[], int size) {
 }
 
 void printNode(sightingNode *node) {
-    printf("%s", node->city);
+    printf("%d/%d/%d at %02d:%02d in %s (%s, %s): %s for %d seconds; \"%s...\"",
+           node->dateTime.date.month,
+           node->dateTime.date.day,
+           node->dateTime.date.year,
+           node->dateTime.hour,
+           node->dateTime.minute,
+           node->city,
+           node->state,
+           node->country,
+           node->shape,
+           node->duration,
+           node->comment
+    );
 }
 
 sightingNode *swapNodes(sightingNode *ptr1, sightingNode *ptr2) {
@@ -283,6 +321,18 @@ int datecmp(date d1, date d2) {
     return 0;
 }
 
+void lookAhead(sightingNode **node, int steps) {
+    int i;
+    sightingNode *out = *node;
+    for (i = 0; i < steps; i++) {
+        if (out->next)
+            out = out->next;
+        else
+            return;
+    }
+    *node = out;
+}
+
 void searchByString(sightingNode **results, sightingNode *head, stringPredicate predicate, char string[]) {
     sightingNode *node = head;
     int i = 0;
@@ -343,7 +393,9 @@ void addEntry(sightingNode **head, sightingNode *node) {
 }
 
 void removeEntry(sightingNode **node) {
+    sightingNode *temp = *node;
     *node = (*node)->next;
+    free(temp);
 }
 
 int saveData(sightingNode *head) {
