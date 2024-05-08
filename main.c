@@ -40,11 +40,11 @@ typedef int (*stringPredicate)(sightingNode *, char s[]);
 
 typedef int (*datePredicate)(sightingNode *, date);
 
+typedef int (*compare)(sightingNode *, sightingNode *, int);
+
 void readStringToSpacer(FILE *csv, char string[]);
 
 void freeData(sightingNode *head);
-
-void sortByDate(sightingNode **head, int size);
 
 void printList(sightingNode *head, int maxNodes);
 
@@ -58,21 +58,35 @@ int loadData(char fileName[], sightingNode *head);
 
 int contains(char c, char arr[], int len);
 
-int datecmp(date d1, date d2);
-
 void lookAhead(sightingNode **node, int steps);
+
+void sortBy(sightingNode **head, int size, int dir, compare function);
+
+int dateTimeCompare(sightingNode *n1, sightingNode *n2, int dir);
+
+int dateReportedCompare(sightingNode *n1, sightingNode *n2, int dir);
+
+int cityCompare(sightingNode *n1, sightingNode *n2, int dir);
+
+int stateCompare(sightingNode *n1, sightingNode *n2, int dir);
+
+int countryCompare(sightingNode *n1, sightingNode *n2, int dir);
+
+int shapeCompare(sightingNode *n1, sightingNode *n2, int dir);
+
+int durationCompare(sightingNode *n1, sightingNode *n2, int dir);
 
 void searchByString(sightingNode **results, sightingNode *head, stringPredicate predicate, char string[]);
 
-void searchByDate(sightingNode **results, sightingNode *head, datePredicate predicate, date d);
-
 int shapePredicate(sightingNode *node, char *shape);
 
-int cityPredicate(sightingNode *node, char *shape);
+int cityPredicate(sightingNode *node, char *city);
 
-int statePredicate(sightingNode *node, char *shape);
+int statePredicate(sightingNode *node, char *state);
 
-int countryPredicate(sightingNode *node, char *shape);
+int countryPredicate(sightingNode *node, char *country);
+
+void searchByDate(sightingNode **results, sightingNode *head, datePredicate predicate, date d);
 
 int dateOccurredPredicate(sightingNode *node, date d);
 
@@ -98,8 +112,8 @@ int main(void) {
     char mainMenuOptions[] = {'v', 'o', 'f', 'c', 'a', 'r', 's', 'q'};
     char sortMenu[][MAX_MENU_OPTION] = {"Date", "City", "State", "Country", "Shape", "Duration", "Date reported",
                                         "Reverse sorting"};
-    char sortMenuOptions[] = {'d', 't', 's', 'c', 'h', 'u', 'r', 'f'};
-    char filterMenu[][MAX_MENU_OPTION] = {"Date", "City", "State", "Country", "Shape", "Reported", "Clear"};
+    char sortMenuOptions[] = {'d', 't', 's', 'c', 'h', 'u', 'p', 'r'};
+    char filterMenu[][MAX_MENU_OPTION] = {"Date", "City", "State", "Country", "Shape", "Date Reported", "Clear"};
     char filterMenuOptions[] = {'d', 't', 's', 'c', 'h', 'r', 'l'};
     char openMenu[][MAX_MENU_OPTION] = {"Continue to file name entry?"};
     char openMenuOptions[] = {'e', 'd'};
@@ -107,8 +121,10 @@ int main(void) {
     // DECLARE OTHER VARIABLES
     int size;
     int viewingLocation = 0;
+    int sortDir = 1;
     int state = 4; // 0 = exiting; 1 = main menu; 2 = sort menu; 3 = filter menu, 4 = opening data
     char fileName[50] = "../sample.csv";
+    compare prevSort = dateTimeCompare;
     sightingNode *headNode = malloc(sizeof(sightingNode));
     sightingNode *viewingNode = headNode;
 
@@ -129,10 +145,52 @@ int main(void) {
                         if (viewingLocation + 10 >= size)
                             printf("End of data\n");
                         break;
+                    case 'o':
+                        menuInput = menu("Sorting Data", sortMenu, sortMenuOptions,
+                                         sizeof(sortMenu) / sizeof(sortMenu[0]), 0);
+                        switch (menuInput) {
+                            case 'd':
+                                sortBy(&headNode, size, sortDir, dateTimeCompare);
+                                break;
+                            case 't':
+                                sortBy(&headNode, size, sortDir, cityCompare);
+                                break;
+                            case 's':
+                                sortBy(&headNode, size, sortDir, stateCompare);
+                                break;
+                            case 'c':
+                                sortBy(&headNode, size, sortDir, countryCompare);
+                                break;
+                            case 'h':
+                                sortBy(&headNode, size, sortDir, shapeCompare);
+                                break;
+                            case 'u':
+                                sortBy(&headNode, size, sortDir, durationCompare);
+                                break;
+                            case 'p':
+                                sortBy(&headNode, size, sortDir, dateReportedCompare);
+                                break;
+                            case 'r':
+                                sortDir *= -1;
+                                sortBy(&headNode, size, sortDir, prevSort);
+                                break;
+                        }
+                        viewingNode = headNode;
+                        viewingLocation = 0;
+                        printList(viewingNode, MAX_SEARCH_RESULTS);
+                        if (viewingLocation + 10 >= size)
+                            printf("End of data\n");
+                        break;
+                    case 'f':
+                        break;
                     case 'c':
                         viewingNode = headNode;
                         viewingLocation = 0;
                         printList(viewingNode, MAX_SEARCH_RESULTS);
+                        break;
+                    case 'a':
+                        break;
+                    case 'r':
                         break;
                     case 's':
                         if (saveData(headNode))
@@ -194,7 +252,7 @@ void freeData(sightingNode *head) {
         freeData(head->next);
 }
 
-void sortByDate(sightingNode **head, int size) { // TODO Test
+void sortBy(sightingNode **head, int size, int dir, compare function) {
     sightingNode **cur, *ptr1, *ptr2;
     int sorted, i, j;
     for (i = 0; i < size; i++) {
@@ -203,7 +261,7 @@ void sortByDate(sightingNode **head, int size) { // TODO Test
         for (j = 0; j < size - i - 1; j++) {
             ptr1 = *cur;
             ptr2 = ptr1->next;
-            if (datecmp(ptr1->dateReported, ptr2->dateReported) > 0) {
+            if (function(ptr1, ptr2, dir) > 0) {
                 *cur = swapNodes(ptr1, ptr2);
                 sorted = 0;
             }
@@ -302,23 +360,70 @@ int contains(char c, char arr[], int len) {
     return 0;
 }
 
-int datecmp(date d1, date d2) {
+int dateTimeCompare(sightingNode *n1, sightingNode *n2, int dir) {
     // -1 == d1 before
     // 1 == d1 after
     // 0 == same date
-    if (d1.year < d2.year)
-        return -1;
-    else if (d1.year > d2.year)
-        return 1;
-    if (d1.month < d2.month)
-        return -1;
-    else if (d1.month > d2.month)
-        return 1;
-    if (d1.day < d2.day)
-        return -1;
-    else if (d1.day > d2.day)
-        return 1;
+    if (n1->dateTime.date.year < n2->dateTime.date.year)
+        return -1 * dir;
+    else if (n1->dateTime.date.year > n2->dateTime.date.year)
+        return 1 * dir;
+    if (n1->dateTime.date.month < n2->dateTime.date.month)
+        return -1 * dir;
+    else if (n1->dateTime.date.month > n2->dateTime.date.month)
+        return 1 * dir;
+    if (n1->dateTime.date.day < n2->dateTime.date.day)
+        return -1 * dir;
+    else if (n1->dateTime.date.day > n2->dateTime.date.day)
+        return 1 * dir;
+    if (n1->dateTime.hour < n2->dateTime.hour)
+        return -1 * dir;
+    else if (n1->dateTime.hour > n2->dateTime.hour)
+        return 1 * dir;
+    if (n1->dateTime.minute < n2->dateTime.minute)
+        return -1 * dir;
+    else if (n1->dateTime.minute > n2->dateTime.minute)
+        return 1 * dir;
     return 0;
+}
+
+int dateReportedCompare(sightingNode *n1, sightingNode *n2, int dir) {
+    // -1 == d1 before
+    // 1 == d1 after
+    // 0 == same date
+    if (n1->dateReported.year < n2->dateReported.year)
+        return -1 * dir;
+    else if (n1->dateReported.year > n2->dateReported.year)
+        return 1 * dir;
+    if (n1->dateReported.month < n2->dateReported.month)
+        return -1 * dir;
+    else if (n1->dateReported.month > n2->dateReported.month)
+        return 1 * dir;
+    if (n1->dateReported.day < n2->dateReported.day)
+        return -1 * dir;
+    else if (n1->dateReported.day > n2->dateReported.day)
+        return 1 * dir;
+    return 0;
+}
+
+int cityCompare(sightingNode *n1, sightingNode *n2, int dir) {
+    return strcmp(n1->city, n2->city) * dir;
+}
+
+int stateCompare(sightingNode *n1, sightingNode *n2, int dir) {
+    return strcmp(n1->state, n2->state) * dir;
+}
+
+int countryCompare(sightingNode *n1, sightingNode *n2, int dir) {
+    return strcmp(n1->country, n2->country) * dir;
+}
+
+int shapeCompare(sightingNode *n1, sightingNode *n2, int dir) {
+    return strcmp(n1->shape, n2->shape) * dir;
+}
+
+int durationCompare(sightingNode *n1, sightingNode *n2, int dir) {
+    return n1->duration > n2->duration ? dir : -dir;
 }
 
 void lookAhead(sightingNode **node, int steps) {
@@ -380,11 +485,15 @@ int countryPredicate(sightingNode *node, char *country) {
 }
 
 int dateOccurredPredicate(sightingNode *node, date d) {
-    return datecmp(node->dateTime.date, d) == 0;
+    return node->dateTime.date.year == d.year &&
+           node->dateTime.date.month == d.month &&
+           node->dateTime.date.day == d.day;
 }
 
 int dateReportedPredicate(sightingNode *node, date d) {
-    return datecmp(node->dateReported, d) == 0;
+    return node->dateReported.year == d.year &&
+           node->dateReported.month == d.month &&
+           node->dateReported.day == d.day;
 }
 
 void addEntry(sightingNode **head, sightingNode *node) {
