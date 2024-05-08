@@ -94,9 +94,9 @@ int dateOccurredPredicate(sightingNode *node, date d);
 
 int dateReportedPredicate(sightingNode *node, date d);
 
-void addEntry(sightingNode **head, sightingNode *node);
+void addEntry(sightingNode **head);
 
-void removeEntry(sightingNode **node);
+int removeEntry(sightingNode **node);
 
 void getDateInput(date *output, date defaultDate);
 
@@ -302,9 +302,18 @@ int main(void) {
                 break;
             case 'a':
                 state = 1;
+                addEntry(&viewingNode);
+                size++;
+                printList(viewingNode, MAX_SEARCH_RESULTS);
+                if (viewingLocation + 10 >= size)
+                    printf("End of data\n");
                 break;
             case 'r':
                 state = 1;
+                size -= removeEntry(&viewingNode);
+                printList(viewingNode, MAX_SEARCH_RESULTS);
+                if (viewingLocation + 10 >= size)
+                    printf("End of data\n");
                 break;
             case 's':
                 if (saveData(headNode))
@@ -596,15 +605,82 @@ int dateReportedPredicate(sightingNode *node, date d) {
            node->dateReported.day == d.day;
 }
 
-void addEntry(sightingNode **head, sightingNode *node) {
+void addEntry(sightingNode **head) {
+    sightingNode *node = malloc(sizeof(sightingNode));
+    char out[50];
+    char c;
+    int i;
+
+    *out = '\0';
+    do {
+        c = ' ';
+        i = 1;
+        if (*out != '\0')
+            printf("Invalid date\n");
+        printf("Enter a new record in the CSV form \"12/18/2004 14:30,Hanover,NH,US,circle,120,I TOTALLY SAW A CRAZY CIRCLE ORB,5/7/2024,-72.294490,43.703514\"\n> ");
+        scanf("%c", out);
+        c = out[0];
+        while (c != '\n') {
+            scanf("%c", &c);
+            if (c != '\n')
+                out[i] = c;
+            else
+                out[i] = '\0';
+            i++;
+        }
+        printf("\nSTRING: %s\n", out);
+    } while (sscanf(out, "%d/%d/%d %02d:%02d,%[^,]69s,%[^,]3s,%[^,]3s,%[^,]9s,%d,%[^,]235s,%d/%d/%d,%lf,%lf",
+                    &node->dateTime.date.month,
+                    &node->dateTime.date.day,
+                    &node->dateTime.date.year,
+                    &node->dateTime.hour,
+                    &node->dateTime.minute,
+                    &node->city,
+                    &node->state,
+                    &node->country,
+                    &node->shape,
+                    &node->duration,
+                    &node->comment,
+                    &node->dateReported.month,
+                    &node->dateReported.day,
+                    &node->dateReported.year,
+                    &node->longitude,
+                    &node->latitude
+    ) != 16);
+
     node->next = *head;
     *head = node;
 }
 
-void removeEntry(sightingNode **node) {
-    sightingNode *temp = *node;
-    *node = (*node)->next;
+int removeEntry(sightingNode **node) {
+    char out[] = " \0\0";
+    int index, i;
+    sightingNode **rNode = node;
+
+    printf("Enter the on-screen index of the node you want to remove (from the last displayed nodes 0-9) [default 0]\n> ");
+    do {
+        if (out[1] != '\0')
+            printf("Invalid index. Try again\n> ");
+        strcpy(out, "  ");
+        scanf("%c", out);
+        while (out[0] != '\n' && out[1] != '\n') { scanf("%c", out + 1); }
+    } while (sscanf(out, "%d", &index) != 1 && out[0] != '\n');
+    if (out[0] == '\n') index = 0;
+
+    for (i = 0; i < index; i++) {
+        if ((*rNode)->next != NULL || i == 10) {
+            rNode = &(*rNode)->next;
+        } else {
+            printf("That node does not exist. Returning...\n");
+            return 0;
+        }
+    }
+
+    sightingNode *temp = *rNode;
+    *rNode = (*rNode)->next;
     free(temp);
+    printf("Removed node %d\n", index);
+    return 1;
 }
 
 int saveData(sightingNode *head) {
@@ -668,7 +744,6 @@ void getDateInput(date *output, date defaultDate) {
         }
         printf("\nSTRING: %s\n", out);
     } while (sscanf(out, "%d-%d-%d", &output->year, &output->month, &output->day) != 3);
-//    scanf("%c", out);
 }
 
 void getStringInput(char output[], char defaultString[]) {
