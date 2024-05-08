@@ -58,6 +58,8 @@ int loadData(char fileName[], sightingNode *head);
 
 int contains(char c, char arr[], int len);
 
+int containsNull(sightingNode *arr[MAX_SEARCH_RESULTS]);
+
 void lookAhead(sightingNode **node, int steps);
 
 void sortBy(sightingNode **head, int size, int dir, compare function);
@@ -96,6 +98,10 @@ void addEntry(sightingNode **head, sightingNode *node);
 
 void removeEntry(sightingNode **node);
 
+void getDateInput(date *output, date defaultDate);
+
+void getStringInput(char output[], char defaultString[]);
+
 void getFileName(char fileName[]);
 
 int saveData(sightingNode *head);
@@ -113,117 +119,200 @@ int main(void) {
     char sortMenu[][MAX_MENU_OPTION] = {"Date", "City", "State", "Country", "Shape", "Duration", "Date reported",
                                         "Reverse sorting"};
     char sortMenuOptions[] = {'d', 't', 's', 'c', 'h', 'u', 'p', 'r'};
-    char filterMenu[][MAX_MENU_OPTION] = {"Date", "City", "State", "Country", "Shape", "Date Reported", "Clear"};
-    char filterMenuOptions[] = {'d', 't', 's', 'c', 'h', 'r', 'l'};
+    char filterMenu[][MAX_MENU_OPTION] = {"Date", "City", "State", "Country", "Shape", "Date Reported", "Reset"};
+    char filterMenuOptions[] = {'d', 't', 's', 'c', 'h', 'p', 'r'};
     char openMenu[][MAX_MENU_OPTION] = {"Continue to file name entry?"};
     char openMenuOptions[] = {'e', 'd'};
 
     // DECLARE OTHER VARIABLES
     int size;
     int viewingLocation = 0;
+    int prevSearchType; // 0 = date; 1 = string
     int sortDir = 1;
-    int state = 4; // 0 = exiting; 1 = main menu; 2 = sort menu; 3 = filter menu, 4 = opening data
+    int state = 3; // 0 = exiting; 1 = normal viewing; 2 = filtered viewing, 3 = opening data
     char fileName[50] = "../sample.csv";
     compare prevSort = dateTimeCompare;
+    datePredicate prevDateSearch;
+    stringPredicate prevStringSearch;
+    char prevStringSearchString[50] = "hanover";
+    date prevDateSearchDate = {2004, 12, 18};
     sightingNode *headNode = malloc(sizeof(sightingNode));
     sightingNode *viewingNode = headNode;
+    sightingNode *searchResults[MAX_SEARCH_RESULTS];
 
+    menuInput = menu("Load data set (return to use default)", openMenu, openMenuOptions,
+                     sizeof(openMenu) / sizeof(openMenu[0]), 1);
+    if (menuInput == 'e')
+        getFileName(fileName);
+    else
+        printf("Using default file name %s\n", fileName);
+    size = loadData(fileName, headNode);
+    viewingNode = headNode;
+    printList(viewingNode, MAX_SEARCH_RESULTS);
+    if (viewingLocation + 10 >= size)
+        printf("End of data\n");
+    state = 1;
 
     while (state) { // TODO: implement all menu actions
-        switch (state) {
-            case 1:
-                menuInput = menu("Main Menu", mainMenu, mainMenuOptions, sizeof(mainMenu) / sizeof(mainMenu[0]), 0);
-                switch (menuInput) {
-                    case 'v':
-                        if (viewingLocation + 10 >= size) {
-                            printf("You are already viewing the end of the data. Try 'c' to return to the top\n");
-                            break;
+        menuInput = menu("Main Menu", mainMenu, mainMenuOptions, sizeof(mainMenu) / sizeof(mainMenu[0]), 0);
+        switch (menuInput) {
+            case 'v':
+                if (state == 2) {
+                    if (!containsNull(searchResults) && searchResults[9]->next != NULL) {
+                        if (prevSearchType) {
+                            lookAhead(&searchResults[9], MAX_SEARCH_RESULTS);
+                            searchByString(searchResults, searchResults[9], prevStringSearch, prevStringSearchString);
                         }
-                        lookAhead(&viewingNode, MAX_SEARCH_RESULTS);
-                        viewingLocation += 10;
-                        printList(viewingNode, MAX_SEARCH_RESULTS);
-                        if (viewingLocation + 10 >= size)
-                            printf("End of data\n");
+                    } else {
+                        printf("You are already viewing the end of the data. Try 'c' to return to the top\n");
                         break;
-                    case 'o':
-                        menuInput = menu("Sorting Data", sortMenu, sortMenuOptions,
-                                         sizeof(sortMenu) / sizeof(sortMenu[0]), 0);
-                        switch (menuInput) {
-                            case 'd':
-                                sortBy(&headNode, size, sortDir, dateTimeCompare);
-                                break;
-                            case 't':
-                                sortBy(&headNode, size, sortDir, cityCompare);
-                                break;
-                            case 's':
-                                sortBy(&headNode, size, sortDir, stateCompare);
-                                break;
-                            case 'c':
-                                sortBy(&headNode, size, sortDir, countryCompare);
-                                break;
-                            case 'h':
-                                sortBy(&headNode, size, sortDir, shapeCompare);
-                                break;
-                            case 'u':
-                                sortBy(&headNode, size, sortDir, durationCompare);
-                                break;
-                            case 'p':
-                                sortBy(&headNode, size, sortDir, dateReportedCompare);
-                                break;
-                            case 'r':
-                                sortDir *= -1;
-                                sortBy(&headNode, size, sortDir, prevSort);
-                                break;
-                        }
-                        viewingNode = headNode;
-                        viewingLocation = 0;
-                        printList(viewingNode, MAX_SEARCH_RESULTS);
-                        if (viewingLocation + 10 >= size)
-                            printf("End of data\n");
+                    }
+                    printArray(searchResults, MAX_SEARCH_RESULTS);
+                    if (containsNull(searchResults) || searchResults[9]->next == NULL)
+                        printf("End of data\n");
+                } else {
+                    if (viewingLocation + 10 >= size) {
+                        printf("You are already viewing the end of the data. Try 'c' to return to the top\n");
                         break;
-                    case 'f':
-                        break;
-                    case 'c':
-                        viewingNode = headNode;
-                        viewingLocation = 0;
-                        printList(viewingNode, MAX_SEARCH_RESULTS);
-                        break;
-                    case 'a':
-                        break;
-                    case 'r':
-                        break;
-                    case 's':
-                        if (saveData(headNode))
-                            state = 0;
-                        break;
-                    case 'q':
-                        printf("Exiting program...");
-                        state = 0;
-                        break;
+                    }
+                    lookAhead(&viewingNode, MAX_SEARCH_RESULTS);
+                    viewingLocation += 10;
+                    printList(viewingNode, MAX_SEARCH_RESULTS);
+                    if (viewingLocation + 10 >= size)
+                        printf("End of data\n");
                 }
                 break;
-            case 2:
-                menuInput = menu("Sort Menu", sortMenu, sortMenuOptions, sizeof(sortMenu) / sizeof(sortMenu[0]), 0);
-                break;
-            case 3:
-                menuInput = menu("Filter menu", filterMenu, filterMenuOptions,
-                                 sizeof(filterMenu) / sizeof(filterMenu[0]), 6);
-                break;
-            case 4:
-                menuInput = menu("Load data set (return to use default)", openMenu, openMenuOptions,
-                                 sizeof(openMenu) / sizeof(openMenu[0]), 1);
-                if (menuInput == 'e')
-                    getFileName(fileName);
-                else
-                    printf("Using default file name %s\n", fileName);
-                size = loadData(fileName, headNode);
+            case 'o':
+                menuInput = menu("Sorting Menu", sortMenu, sortMenuOptions,
+                                 sizeof(sortMenu) / sizeof(sortMenu[0]), 0);
+                switch (menuInput) {
+                    case 'd':
+                        prevSort = dateTimeCompare;
+                        break;
+                    case 't':
+                        prevSort = cityCompare;
+                        break;
+                    case 's':
+                        prevSort = stateCompare;
+                        break;
+                    case 'c':
+                        prevSort = countryCompare;
+                        break;
+                    case 'h':
+                        prevSort = shapeCompare;
+                        break;
+                    case 'u':
+                        prevSort = durationCompare;
+                        break;
+                    case 'p':
+                        prevSort = dateReportedCompare;
+                        break;
+                    default: // r
+                        sortDir *= -1;
+                }
+                sortBy(&headNode, size, sortDir, prevSort);
                 viewingNode = headNode;
+                viewingLocation = 0;
                 printList(viewingNode, MAX_SEARCH_RESULTS);
                 if (viewingLocation + 10 >= size)
                     printf("End of data\n");
                 state = 1;
                 break;
-            default:
+            case 'f':
+                menuInput = menu("Filter (search) menu", filterMenu, filterMenuOptions,
+                                 sizeof(filterMenu) / sizeof(filterMenu[0]), 6);
+                switch (menuInput) {
+                    case 'd':
+                        getDateInput(&prevDateSearchDate, prevDateSearchDate);
+                        searchByDate(searchResults, headNode, dateOccurredPredicate, prevDateSearchDate);
+                        prevSearchType = 0;
+                        prevDateSearch = dateOccurredPredicate;
+                        state = 2;
+                        break;
+                    case 't':
+                        getStringInput(prevStringSearchString, "hanover");
+                        searchByString(searchResults, headNode, cityPredicate, prevStringSearchString);
+                        prevSearchType = 1;
+                        prevStringSearch = cityPredicate;
+                        state = 2;
+                        break;
+                    case 's':
+                        getStringInput(prevStringSearchString, "nh");
+                        searchByString(searchResults, headNode, statePredicate, prevStringSearchString);
+                        prevSearchType = 1;
+                        prevStringSearch = statePredicate;
+                        state = 2;
+                        break;
+                    case 'c':
+                        getStringInput(prevStringSearchString, "us");
+                        searchByString(searchResults, headNode, countryPredicate, prevStringSearchString);
+                        prevSearchType = 1;
+                        prevStringSearch = countryPredicate;
+                        state = 2;
+                        break;
+                    case 'h':
+                        getStringInput(prevStringSearchString, "circle");
+                        searchByString(searchResults, headNode, shapePredicate, prevStringSearchString);
+                        prevSearchType = 1;
+                        prevStringSearch = shapePredicate;
+                        state = 2;
+                        break;
+                    case 'p':
+                        getDateInput(&prevDateSearchDate, prevDateSearchDate);
+                        searchByDate(searchResults, headNode, dateReportedPredicate, prevDateSearchDate);
+                        prevSearchType = 0;
+                        prevDateSearch = dateReportedPredicate;
+                        state = 2;
+                        break;
+                    case 'r':
+                        state = 1;
+                        break;
+                }
+                if (state == 2 && searchResults[0] != NULL) {
+                    viewingNode = headNode;
+                    viewingLocation = 0;
+                    printArray(searchResults, MAX_SEARCH_RESULTS);
+                    if (containsNull(searchResults) || searchResults[9]->next == NULL)
+                        printf("End of data\n");
+                } else {
+                    if (state == 2)
+                        printf("No results\n");
+                    state = 1;
+                    printList(viewingNode, MAX_SEARCH_RESULTS);
+                    if (viewingLocation + 10 >= size)
+                        printf("End of data\n");
+                }
+                break;
+            case 'c':
+                if (state == 2) {
+                    if (prevSearchType)
+                        searchByString(searchResults, headNode, prevStringSearch, prevStringSearchString);
+                    else
+                        searchByDate(searchResults, headNode, prevDateSearch, prevDateSearchDate);
+                    printArray(searchResults, MAX_SEARCH_RESULTS);
+                    if (containsNull(searchResults) || searchResults[9]->next == NULL)
+                        printf("End of data\n");
+                } else {
+                    viewingNode = headNode;
+                    viewingLocation = 0;
+                    printList(viewingNode, MAX_SEARCH_RESULTS);
+                    if (viewingLocation + 10 >= size)
+                        printf("End of data\n");
+                }
+                break;
+            case 'a':
+                state = 1;
+                break;
+            case 'r':
+                state = 1;
+                break;
+            case 's':
+                if (saveData(headNode))
+                    state = 0;
+                break;
+            case 'q':
+                printf("Exiting program...");
+                state = 0;
                 break;
         }
     }
@@ -276,6 +365,7 @@ void printList(sightingNode *head, int maxNodes) {
     sightingNode *node = head;
     int i = 0;
     while (node != NULL && i < maxNodes) {
+        printf("(%d) ", i);
         printNode(node); // TODO function pointer here for varied printing (like a lambda)
         printf("\n");
         i++;
@@ -286,6 +376,7 @@ void printList(sightingNode *head, int maxNodes) {
 void printArray(sightingNode *arr[], int size) {
     int i = 0;
     while (arr[i] != NULL && i < size) {
+        printf("(%d) ", i);
         printNode(arr[i]); // TODO function pointer here for varied printing (like a lambda)
         printf("\n");
         i++;
@@ -319,6 +410,7 @@ int loadData(char fileName[], sightingNode *head) {
     FILE *csv = fopen(fileName, "r");
     sightingNode *node = head;
     int i = 0;
+    char junk;
 
     while (1) {
         i++;
@@ -342,7 +434,7 @@ int loadData(char fileName[], sightingNode *head) {
                &node->longitude,
                &node->latitude
         );
-        if (fscanf(csv, "%c") == EOF) break;
+        if (fscanf(csv, "%c", &junk) == EOF) break;
         fseek(csv, -1, SEEK_CUR);
         node->next = malloc(sizeof(sightingNode));
         node = node->next;
@@ -356,6 +448,14 @@ int contains(char c, char arr[], int len) {
     int i;
     for (i = 0; i < len; i++)
         if (arr[i] == c)
+            return 1;
+    return 0;
+}
+
+int containsNull(sightingNode *arr[MAX_SEARCH_RESULTS]) {
+    int i;
+    for (i = 0; i < MAX_SEARCH_RESULTS; i++)
+        if (arr[i] == NULL)
             return 1;
     return 0;
 }
@@ -539,6 +639,58 @@ int saveData(sightingNode *head) {
     fclose(file);
     printf("Data saved to %s.\n", fileName);
     return 1;
+}
+
+void getDateInput(date *output, date defaultDate) {
+    char out[50];
+    char c;
+    int i = 1;
+    *out = '\0';
+    do {
+        c = ' ';
+        i = 1;
+        if (*out != '\0')
+            printf("Invalid date\n");
+        printf("Enter search date in the form YYYY-MM-DD\n> ");
+        scanf("%c", out);
+        if (out[0] == '\n') {
+            printf("Using default date");
+            *output = defaultDate;
+            return;
+        }
+        while (c != '\n') {
+            scanf("%c", &c);
+            if (c != '\n')
+                out[i] = c;
+            else
+                out[i] = '\0';
+            i++;
+        }
+        printf("\nSTRING: %s\n", out);
+    } while (sscanf(out, "%d-%d-%d", &output->year, &output->month, &output->day) != 3);
+//    scanf("%c", out);
+}
+
+void getStringInput(char output[], char defaultString[]) {
+    char out[50];
+    char c = ' ';
+    int i = 1;
+    printf("Enter search term\n> ");
+    scanf("%c", out);
+    if (out[0] == '\n') {
+        printf("Using default term %s\n", defaultString);
+        strcpy(output, defaultString);
+        return;
+    }
+    while (c != '\n') {
+        scanf("%c", &c);
+        if (c != '\n')
+            out[i] = c;
+        else
+            out[i] = '\0';
+        i++;
+    }
+    strcpy(output, out);
 }
 
 void getFileName(char fileName[]) {
