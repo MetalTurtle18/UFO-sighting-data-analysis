@@ -427,7 +427,9 @@ int main(void) {
                 break;
             case 'a': // Add entry option
                 state = 1;
-                addEntry(&viewingNode);
+                addEntry(&headNode);
+                viewingNode = headNode;
+                viewingLocation = 0;
                 size++;
                 printList(viewingNode, MAX_SEARCH_RESULTS);
                 if (viewingLocation + 10 >= size) // If they are viewing the last 10 (or fewer) items, indicate that
@@ -457,7 +459,7 @@ int main(void) {
 
 void addEntry(sightingNode **head) {
     sightingNode *node = malloc(sizeof(sightingNode));
-    char out[50];
+    char out[500];
     char c;
     int i;
 
@@ -484,12 +486,12 @@ void addEntry(sightingNode **head) {
                     &node->dateTime.date.year,
                     &node->dateTime.hour,
                     &node->dateTime.minute,
-                    &node->city,
-                    &node->state,
-                    &node->country,
-                    &node->shape,
+                    node->city,
+                    node->state,
+                    node->country,
+                    node->shape,
                     &node->duration,
-                    &node->comment,
+                    node->comment,
                     &node->dateReported.month,
                     &node->dateReported.day,
                     &node->dateReported.year,
@@ -498,14 +500,14 @@ void addEntry(sightingNode **head) {
     ) != 16);
 
     node->next = *head;
-    *head = node; // TODO: figure out this SIGABRT
+    *head = node;
 }
 
 void freeData(sightingNode *head) {
     if (head->next == NULL)
-        free(head);
+        free(head); // If this is the last node, free it
     else
-        freeData(head->next);
+        freeData(head->next); // Recursively free the subsequent nodes
 }
 
 void getDateInput(date *output, date defaultDate) {
@@ -973,3 +975,10 @@ sightingNode *swapNodes(sightingNode *ptr1, sightingNode *ptr2) {
     ptr1->next = tmp;
     return ptr2;
 }
+
+/**
+* SOURCES:
+* Data: https://www.kaggle.com/datasets/NUFORC/ufo-sightings/data?select=scrubbed.csv
+* Linked list bubble sort: https://www.prepbytes.com/blog/linked-list/c-program-for-performing-bubble-sort-on-linked-list/
+* Higher order functions: https://medium.com/nerd-for-tech/higher-order-functions-in-c-74f6c4b550ee
+*/
